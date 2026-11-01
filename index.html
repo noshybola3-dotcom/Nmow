@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#065f46">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <meta name="description" content="نُمو - تطبيق بسيط لإدارة الدخل والمصروفات والديون والجمعيات">
+  <title>نُــمُــو | محفظتك المالية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { cairo: ['Cairo','sans-serif'] } } } };
+  </script>
+  <style>
+    *{box-sizing:border-box} body{font-family:'Cairo',sans-serif;background:#f8fafc}
+    .hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{scrollbar-width:none}
+    button:disabled{cursor:not-allowed}
+    input,select,button{font:inherit}
+    .field{width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:11px 13px;font-size:13px;outline:none}
+    .field:focus{border-color:#10b981;box-shadow:0 0 0 3px #10b98118}
+    .primary{background:#059669;color:white;font-weight:700;border-radius:12px;padding:10px 16px}
+    .primary:hover{background:#047857}
+    .danger{color:#e11d48}
+    .tab-active{background:#059669!important;color:white!important}
+  </style>
+</head>
+<body class="text-slate-800 pb-10">
+<header class="bg-gradient-to-l from-emerald-800 to-teal-900 text-white sticky top-0 z-40 shadow-md">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-200 text-xl"><i class="fa-solid fa-chart-line"></i></div>
+      <div><h1 class="text-xl font-extrabold">نُــمُــو</h1><p class="text-[10px] text-emerald-100">إدارتك المالية بكل سهولة</p></div>
+    </div>
+    <select id="currencySelector" class="bg-emerald-950/50 text-white text-xs rounded-lg px-2 py-2 border border-emerald-600" aria-label="العملة">
+      <option value="EGP">جنيه مصري</option><option value="SAR">ريال سعودي</option><option value="AED">درهم إماراتي</option><option value="USD">دولار أمريكي</option><option value="EUR">يورو</option>
+    </select>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 pt-5">
+  <div id="alertsContainer" class="space-y-2 mb-5"></div>
+  <nav class="flex overflow-x-auto hide-scrollbar gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 mb-5 text-sm font-bold">
+    <button data-tab="dashboard" class="tab tab-active min-w-[95px] flex-1 rounded-xl py-2.5 px-3"><i class="fa-solid fa-house ml-1"></i>الرئيسية</button>
+    <button data-tab="fixed" class="tab min-w-[105px] flex-1 rounded-xl py-2.5 px-3 text-slate-600"><i class="fa-solid fa-calendar-check ml-1"></i>مصاريف ثابتة</button>
+    <button data-tab="jamya" class="tab min-w-[90px] flex-1 rounded-xl py-2.5 px-3 text-slate-600"><i class="fa-solid fa-users ml-1"></i>الجمعيات</button>
+    <button data-tab="debts" class="tab min-w-[80px] flex-1 rounded-xl py-2.5 px-3 text-slate-600"><i class="fa-solid fa-hand-holding-dollar ml-1"></i>الديون</button>
+    <button data-tab="transactions" class="tab min-w-[105px] flex-1 rounded-xl py-2.5 px-3 text-slate-600"><i class="fa-solid fa-receipt ml-1"></i>المعاملات</button>
+  </nav>
+
+  <section id="content-dashboard" class="tab-content space-y-5">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <article class="metric"><p>إجمالي الدخل</p><strong id="dashIncome">0</strong><small class="text-emerald-600">الدخل المسجل</small></article>
+      <article class="metric"><p>إجمالي المصاريف</p><strong id="dashExpenses">0</strong><small class="text-rose-500">الثابت واليومي والجمعيات</small></article>
+      <article class="metric"><p>المتبقي الصافي</p><strong id="dashRemaining">0</strong><small id="dashRemainingSub">الرصيد بعد المصروفات</small></article>
+      <article class="metric"><p>الديون المستحقة عليك</p><strong id="dashDebts" class="text-amber-600">0</strong><small>المتبقي من التزاماتك</small></article>
+    </div>
+    <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-5 md:p-6 shadow">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div><span class="text-xs text-emerald-300 bg-white/10 rounded-full px-3 py-1"> <i class="fa-solid fa-shield-halved ml-1"></i>تحليل الميزانية</span><h2 class="text-xl font-bold mt-3">ملخص قدرتك على الادخار</h2><p class="text-xs text-slate-300 mt-2">النسبة تقديرية بناءً على الدخل والمصروفات المسجلة في التطبيق.</p></div>
+        <div class="flex gap-6 bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div class="text-center"><p class="text-xs text-slate-300">نسبة الادخار</p><strong id="savingsRate" class="text-3xl text-emerald-400">0%</strong></div>
+          <div class="w-px bg-white/20"></div>
+          <div class="text-center"><p class="text-xs text-slate-300">حالة الميزانية</p><strong id="savingsStatus" class="text-sm">تحتاج مراجعة</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm"><h3 class="font-bold mb-4"><i class="fa-solid fa-clock-rotate-left text-emerald-600 ml-2"></i>آخر المعاملات</h3><div id="recentTransactionsList" class="space-y-2"></div></div>
+  </section>
+
+  <section id="content-fixed" class="tab-content hidden space-y-5">
+    <div class="panel"><h3 class="panel-title">إضافة مصروف ثابت</h3>
+      <form id="fixedForm" class="grid sm:grid-cols-3 gap-3">
+        <input id="fixedTitle" class="field" placeholder="اسم المصروف مثل الإيجار" required maxlength="80">
+        <input id="fixedAmount" class="field" type="number" min="0.01" step="0.01" placeholder="المبلغ" required>
+        <div class="flex gap-2"><input id="fixedDay" class="field" type="number" min="1" max="31" placeholder="يوم الاستحقاق" required><button class="primary flex-1">حفظ</button></div>
+      </form>
+    </div>
+    <div class="panel"><h3 class="panel-title">المصاريف الثابتة والتذكيرات</h3><div id="fixedExpensesList" class="space-y-2"></div></div>
+  </section>
+
+  <section id="content-jamya" class="tab-content hidden space-y-5">
+    <div class="panel"><h3 class="panel-title">إضافة جمعية جديدة</h3>
+      <form id="jamyaForm" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <input id="jamyaName" class="field" placeholder="اسم الجمعية" required maxlength="80">
+        <input id="jamyaMonthly" class="field" type="number" min="0.01" step="0.01" placeholder="القسط الشهري" required>
+        <input id="jamyaTotalMonths" class="field" type="number" min="1" max="600" placeholder="إجمالي الشهور" required>
+        <input id="jamyaPaidMonths" class="field" type="number" min="0" placeholder="الشهور المدفوعة" value="0" required>
+        <input id="jamyaPayoutMonth" class="field" placeholder="شهر القبض (اختياري)" maxlength="40">
+        <button class="primary">إضافة الجمعية</button>
+      </form>
+    </div>
+    <div id="jamyaList" class="grid md:grid-cols-2 gap-3"></div>
+  </section>
+
+  <section id="content-debts" class="tab-content hidden space-y-5">
+    <div class="panel"><h3 class="panel-title">إضافة دين أو قسط</h3>
+      <form id="debtForm" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <input id="debtTitle" class="field" placeholder="الوصف أو اسم الشخص" required maxlength="80">
+        <input id="debtTotal" class="field" type="number" min="0.01" step="0.01" placeholder="المبلغ الإجمالي" required>
+        <input id="debtPaid" class="field" type="number" min="0" step="0.01" value="0" placeholder="المسدد حتى الآن">
+        <select id="debtType" class="field"><option value="upon_me">دين عليّ (التزام)</option><option value="for_me">دين لي (مستحق عند الآخرين)</option></select>
+        <button class="primary">إضافة الدين</button>
+      </form>
+    </div>
+    <div id="debtsList" class="grid md:grid-cols-2 gap-3"></div>
+  </section>
+
+  <section id="content-transactions" class="tab-content hidden space-y-5">
+    <div class="panel"><h3 class="panel-title">تسجيل دخل أو مصروف يومي</h3>
+      <form id="transactionForm" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <input id="transTitle" class="field" placeholder="بيان المعاملة" required maxlength="80">
+        <input id="transAmount" class="field" type="number" min="0.01" step="0.01" placeholder="المبلغ" required>
+        <select id="transType" class="field"><option value="income">دخل (+)</option><option value="expense">مصروف (-)</option></select>
+        <button class="primary">تسجيل المعاملة</button>
+      </form>
+    </div>
+    <div class="panel"><h3 class="panel-title">سجل المعاملات</h3><div id="fullTransactionsList" class="space-y-2"></div></div>
+  </section>
+</main>
+
+<div id="paymentModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 p-4 items-center justify-center">
+  <div class="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+    <h3 class="font-bold text-lg">تسجيل دفعة جديدة</h3><p id="modalSubTitle" class="text-xs text-slate-500"></p>
+    <input id="modalPaymentAmount" type="number" min="0.01" step="0.01" class="field" placeholder="قيمة الدفعة">
+    <div class="flex gap-2"><button id="confirmPayment" class="primary flex-1">تأكيد الدفع</button><button id="cancelPayment" class="bg-slate-100 text-slate-700 rounded-xl px-4 flex-1">إلغاء</button></div>
+  </div>
+</div>
+<div id="toast" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-auto z-[60] hidden bg-slate-900 text-white text-sm rounded-xl px-4 py-3 shadow-lg" role="status"></div>
+
+<style>
+.metric,.panel{background:white;border:1px solid #f1f5f9;border-radius:18px;padding:16px;box-shadow:0 1px 3px #0f172a08}
+.metric{position:relative;overflow:hidden;min-height:118px}.metric p{font-size:12px;color:#64748b;font-weight:700;margin-bottom:5px}.metric strong{display:block;font-size:clamp(16px,3vw,23px);font-weight:800;overflow-wrap:anywhere}.metric small{font-size:10px;color:#94a3b8;display:block;margin-top:4px}.panel-title{font-weight:800;margin-bottom:14px;font-size:15px}
+</style>
+<script>
+'use strict';
+const STORAGE_KEY='numoo_financial_data';
+const DEFAULT_DATA={
+  currency:'EGP',
+  fixedExpenses:[{id:'f1',title:'إيجار المنزل',amount:3000,dueDate:1},{id:'f2',title:'فاتورة الكهرباء والماء',amount:450,dueDate:10}],
+  jamyat:[{id:'j1',name:'جمعية العائلة',monthlyAmount:1000,totalMonths:10,paidMonths:4,payoutMonth:'شهر 8'}],
+  debts:[{id:'d1',title:'قسط الجهاز الإلكتروني',totalAmount:5000,paidAmount:2000,type:'upon_me'}],
+  transactions:[{id:'t1',title:'راتب شهري',amount:12000,type:'income',date:today()},{id:'t2',title:'مشتريات سوبرماركت',amount:650,type:'expense',date:today()}]
+};
+function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function makeId(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);}
+function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function loadData(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(!saved||typeof saved!=='object') return structuredClone(DEFAULT_DATA);
+    return {
+      ...structuredClone(DEFAULT_DATA),...saved,
+      fixedExpenses:Array.isArray(saved.fixedExpenses)?saved.fixedExpenses:[],
+      jamyat:Array.isArray(saved.jamyat)?saved.jamyat:(Array.isArray(saved.jamya)?saved.jamya:[]),
+      debts:Array.isArray(saved.debts)?saved.debts:[],
+      transactions:Array.isArray(saved.transactions)?saved.transactions:[]
+    };
+  }catch(error){console.error('تعذر قراءة البيانات المحفوظة',error);return structuredClone(DEFAULT_DATA);}
+}
+let appData=loadData(),activeDebtId=null,toastTimer=null;
+const $=id=>document.getElementById(id);
+function notify(message){const el=$('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.add('hidden'),2600);}
+function formatMoney(value){try{return new Intl.NumberFormat('ar-EG',{style:'currency',currency:appData.currency||'EGP',maximumFractionDigits:2}).format(Number(value)||0);}catch{return (Number(value)||0).toFixed(2)+' '+appData.currency;}}
+function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(appData));renderAll();}catch(error){console.error(error);notify('تعذر الحفظ. قد تكون مساحة التخزين ممتلئة.');}}
+function emptyMessage(text){return `<p class="text-xs text-slate-400 text-center py-5">${text}</p>`;}
+function removeItem(key,id){appData[key]=appData[key].filter(x=>x.id!==id);saveData();notify('تم الحذف');}
+function switchTab(tab){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('hidden',el.id!=='content-'+tab));
+  document.querySelectorAll('.tab').forEach(el=>{el.classList.toggle('tab-active',el.dataset.tab===tab);el.classList.toggle('text-slate-600',el.dataset.tab!==tab);});
+}
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+$('currencySelector').addEventListener('change',e=>{appData.currency=e.target.value;saveData();});
+
+function totals(){
+  const income=appData.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const daily=appData.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const fixed=appData.fixedExpenses.reduce((s,x)=>s+(Number(x.amount)||0),0);
+  const jamya=appData.jamyat.reduce((s,x)=>s+(Number(x.monthlyAmount)||0),0);
+  const expenses=daily+fixed+jamya;
+  const debts=appData.debts.filter(x=>x.type==='upon_me').reduce((s,x)=>s+Math.max(0,(Number(x.totalAmount)||0)-(Number(x.paidAmount)||0)),0);
+  return {income,daily,fixed,jamya,expenses,remaining:income-expenses,debts};
+}
+function renderDashboard(){
+  const t=totals();$('dashIncome').textContent=formatMoney(t.income);$('dashExpenses').textContent=formatMoney(t.expenses);
+  $('dashRemaining').textContent=formatMoney(t.remaining);$('dashRemaining').className=t.remaining<0?'text-rose-600':'text-emerald-600';
+  $('dashRemainingSub').textContent=t.remaining<0?'يوجد عجز في الميزانية':'الرصيد بعد المصروفات المسجلة';$('dashDebts').textContent=formatMoney(t.debts);
+  const rate=t.income>0?Math.round(t.remaining/t.income*100):0;$('savingsRate').textContent=rate+'%';
+  $('savingsStatus').textContent=rate>=20?'ممتازة جداً 🚀':rate>0?'مستقرة ⚖️':'تحتاج مراجعة ⚠️';
+  $('savingsStatus').className=rate>=20?'text-sm font-bold text-emerald-400':rate>0?'text-sm font-bold text-amber-300':'text-sm font-bold text-rose-400';
+  const items=[...appData.transactions].slice(-4).reverse();
+  $('recentTransactionsList').innerHTML=items.length?items.map(transactionRow).join(''):emptyMessage('لا توجد معاملات مسجلة.');
+}
+function transactionRow(item,withDelete=false){
+  const income=item.type==='income';
+  return `<div class="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+    <div class="flex items-center gap-3 min-w-0"><div class="w-9 h-9 shrink-0 rounded-xl ${income?'bg-emerald-100 text-emerald-600':'bg-rose-100 text-rose-600'} flex items-center justify-center"><i class="fa-solid ${income?'fa-arrow-down':'fa-arrow-up'}"></i></div>
+    <div class="min-w-0"><h4 class="text-xs font-bold truncate">${escapeHTML(item.title)}</h4><p class="text-[10px] text-slate-400">${escapeHTML(item.date||'')}</p></div></div>
+    <div class="flex items-center gap-3 shrink-0"><strong class="text-xs ${income?'text-emerald-600':'text-slate-700'}">${income?'+':'−'} ${formatMoney(item.amount)}</strong>
+    ${withDelete?`<button class="danger p-1" data-action="delete-transaction" data-id="${escapeHTML(item.id)}" aria-label="حذف المعاملة"><i class="fa-solid fa-trash-can"></i></button>`:''}</div></div>`;
+}
+function renderFixed(){
+  $('fixedExpensesList').innerHTML=appData.fixedExpenses.length?appData.fixedExpenses.map(x=>`<div class="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+    <div class="min-w-0"><h4 class="text-xs font-bold">${escapeHTML(x.title)}</h4><p class="text-[10px] text-slate-500">موعد الاستحقاق: يوم ${Number(x.dueDate)||'—'} من الشهر</p></div>
+    <div class="flex items-center gap-3 shrink-0"><b class="text-xs">${formatMoney(x.amount)}</b><button class="danger" data-action="delete-fixed" data-id="${escapeHTML(x.id)}" aria-label="حذف"><i class="fa-solid fa-trash-can"></i></button></div></div>`).join(''):emptyMessage('لم تضف مصاريف ثابتة بعد.');
+  const day=new Date().getDate(),due=appData.fixedExpenses.filter(x=>{const diff=Number(x.dueDate)-day;return diff>=0&&diff<=3||diff<0&&diff>=-1;});
+  $('alertsContainer').innerHTML=due.map(x=>`<div class="bg-amber-50 border-r-4 border-amber-500 p-3 rounded-xl text-xs text-amber-800"><i class="fa-solid fa-bell ml-2"></i><b>تذكير:</b> ${escapeHTML(x.title)} بقيمة ${formatMoney(x.amount)} — موعده يوم ${x.dueDate}.</div>`).join('');
+}
+function renderJamya(){
+  $('jamyaList').innerHTML=appData.jamyat.length?appData.jamyat.map(x=>{
+    const total=Math.max(1,Number(x.totalMonths)||1),paid=Math.min(total,Math.max(0,Number(x.paidMonths)||0)),remain=total-paid,pct=Math.round(paid/total*100);
+    return `<article class="panel space-y-3"><div class="flex justify-between gap-2"><div><span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">شهر القبض: ${escapeHTML(x.payoutMonth||'غير محدد')}</span><h4 class="font-bold text-sm mt-2">${escapeHTML(x.name)}</h4></div><button class="danger" data-action="delete-jamya" data-id="${escapeHTML(x.id)}" aria-label="حذف الجمعية"><i class="fa-solid fa-trash-can"></i></button></div>
+    <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl text-center"><div><small class="text-slate-400 block">القسط الشهري</small><b class="text-sm">${formatMoney(x.monthlyAmount)}</b></div><div><small class="text-slate-400 block">الشهور المتبقية</small><b class="text-sm text-emerald-600">${remain}</b></div></div>
+    <div><div class="flex justify-between text-[11px] mb-1 text-slate-500"><span>التقدم: ${paid} من ${total}</span><b>${pct}%</b></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width:${pct}%"></div></div></div>
+    <div class="flex justify-between items-center gap-2"><span class="text-[11px] text-slate-500">المدفوع: ${formatMoney(paid*x.monthlyAmount)}</span><button class="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-2 rounded-lg disabled:opacity-40" data-action="pay-jamya" data-id="${escapeHTML(x.id)}" ${remain===0?'disabled':''}>+ دفع شهر</button></div></article>`;
+  }).join(''):emptyMessage('لا توجد جمعيات مسجلة.');
+}
+function renderDebts(){
+  $('debtsList').innerHTML=appData.debts.length?appData.debts.map(x=>{
+    const total=Math.max(0,Number(x.totalAmount)||0),paid=Math.min(total,Math.max(0,Number(x.paidAmount)||0)),remain=total-paid,pct=total?Math.round(paid/total*100):0,own=x.type==='upon_me';
+    return `<article class="panel space-y-3"><div class="flex justify-between gap-2"><div><span class="text-[10px] px-2 py-1 rounded-full ${own?'bg-amber-50 text-amber-700':'bg-blue-50 text-blue-700'}">${own?'دين عليّ (التزام)':'دين لي (مستحق عند الآخرين)'}</span><h4 class="font-bold text-sm mt-2">${escapeHTML(x.title)}</h4></div><button class="danger" data-action="delete-debt" data-id="${escapeHTML(x.id)}" aria-label="حذف الدين"><i class="fa-solid fa-trash-can"></i></button></div>
+    <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl text-center"><div><small class="text-slate-400 block">المبلغ الكلي</small><b>${formatMoney(total)}</b></div><div><small class="text-slate-400 block">المتبقي</small><b class="${own?'text-amber-600':'text-blue-600'}">${formatMoney(remain)}</b></div></div>
+    <div><div class="flex justify-between text-[11px] mb-1 text-slate-500"><span>نسبة السداد</span><b>${pct}%</b></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${own?'bg-amber-500':'bg-blue-500'}" style="width:${pct}%"></div></div></div>
+    <div class="flex justify-between items-center"><span class="text-[11px] text-slate-500">المسدد: ${formatMoney(paid)}</span><button class="text-xs bg-slate-900 text-white px-3 py-2 rounded-lg disabled:opacity-40" data-action="open-payment" data-id="${escapeHTML(x.id)}" ${remain<=0?'disabled':''}>+ تسجيل دفعة</button></div></article>`;
+  }).join(''):emptyMessage('لا توجد ديون مسجلة.');
+}
+function renderTransactions(){$('fullTransactionsList').innerHTML=appData.transactions.length?[...appData.transactions].reverse().map(x=>transactionRow(x,true)).join(''):emptyMessage('لا توجد معاملات يومية مسجلة.');}
+function renderAll(){$('currencySelector').value=appData.currency||'EGP';renderDashboard();renderFixed();renderJamya();renderDebts();renderTransactions();}
+function validAmount(v){return Number.isFinite(v)&&v>0;}
+$('fixedForm').addEventListener('submit',e=>{e.preventDefault();const title=$('fixedTitle').value.trim(),amount=Number($('fixedAmount').value),day=Number($('fixedDay').value);if(!title||!validAmount(amount)||!Number.isInteger(day)||day<1||day>31)return notify('راجع بيانات المصروف.');appData.fixedExpenses.push({id:makeId('f'),title,amount,dueDate:day});e.target.reset();saveData();notify('تمت إضافة المصروف الثابت');});
+$('jamyaForm').addEventListener('submit',e=>{e.preventDefault();const name=$('jamyaName').value.trim(),monthlyAmount=Number($('jamyaMonthly').value),totalMonths=Number($('jamyaTotalMonths').value),paidMonths=Number($('jamyaPaidMonths').value),payoutMonth=$('jamyaPayoutMonth').value.trim()||'غير محدد';if(!name||!validAmount(monthlyAmount)||!Number.isInteger(totalMonths)||totalMonths<1||!Number.isInteger(paidMonths)||paidMonths<0||paidMonths>totalMonths)return notify('راجع بيانات الجمعية؛ الشهور المدفوعة لا تتجاوز الإجمالي.');appData.jamyat.push({id:makeId('j'),name,monthlyAmount,totalMonths,paidMonths,payoutMonth});e.target.reset();$('jamyaPaidMonths').value=0;saveData();notify('تمت إضافة الجمعية');});
+$('debtForm').addEventListener('submit',e=>{e.preventDefault();const title=$('debtTitle').value.trim(),totalAmount=Number($('debtTotal').value),paidAmount=Number($('debtPaid').value)||0,type=$('debtType').value;if(!title||!validAmount(totalAmount)||paidAmount<0||paidAmount>totalAmount)return notify('راجع المبلغ الإجمالي والمبلغ المسدد.');appData.debts.push({id:makeId('d'),title,totalAmount,paidAmount,type});e.target.reset();$('debtPaid').value=0;saveData();notify('تمت إضافة الدين');});
+$('transactionForm').addEventListener('submit',e=>{e.preventDefault();const title=$('transTitle').value.trim(),amount=Number($('transAmount').value),type=$('transType').value;if(!title||!validAmount(amount))return notify('أدخل بياناً ومبلغاً صحيحاً.');appData.transactions.push({id:makeId('t'),title,amount,type,date:today()});e.target.reset();saveData();notify('تم تسجيل المعاملة');});
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-action]');if(!btn)return;const {action,id}=btn.dataset;
+  if(action==='delete-fixed')removeItem('fixedExpenses',id);
+  if(action==='delete-jamya')removeItem('jamyat',id);
+  if(action==='delete-debt')removeItem('debts',id);
+  if(action==='delete-transaction')removeItem('transactions',id);
+  if(action==='pay-jamya'){const x=appData.jamyat.find(v=>v.id===id);if(x&&x.paidMonths<x.totalMonths){x.paidMonths++;saveData();notify('تم تسجيل قسط شهر');}}
+  if(action==='open-payment')openPayment(id);
+});
+function openPayment(id){const item=appData.debts.find(x=>x.id===id);if(!item)return;activeDebtId=id;$('modalSubTitle').textContent=`${item.title} — المتبقي ${formatMoney(item.totalAmount-item.paidAmount)}`;$('modalPaymentAmount').value='';$('paymentModal').classList.remove('hidden');$('paymentModal').classList.add('flex');}
+function closePayment(){$('paymentModal').classList.add('hidden');$('paymentModal').classList.remove('flex');activeDebtId=null;}
+$('cancelPayment').addEventListener('click',closePayment);
+$('paymentModal').addEventListener('click',e=>{if(e.target===$('paymentModal'))closePayment();});
+$('confirmPayment').addEventListener('click',()=>{const amount=Number($('modalPaymentAmount').value),item=appData.debts.find(x=>x.id===activeDebtId);if(!item||!validAmount(amount))return notify('أدخل مبلغ دفعة صحيحاً.');const remaining=Math.max(0,item.totalAmount-item.paidAmount);if(amount>remaining)return notify('قيمة الدفعة أكبر من المبلغ المتبقي.');item.paidAmount+=amount;saveData();closePayment();notify('تم تسجيل الدفعة');});
+renderAll();
+</script>
+
+<script>
+(() => {
+  let deferredPrompt = null;
+  const installBtn = document.createElement('button');
+  installBtn.type = 'button';
+  installBtn.textContent = '＋ تثبيت التطبيق';
+  installBtn.setAttribute('aria-label', 'تثبيت تطبيق نمو على الهاتف');
+  installBtn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:1000;background:#047857;color:white;padding:12px 16px;border-radius:14px;font-family:Cairo,sans-serif;font-weight:700;box-shadow:0 6px 20px #0002;display:none';
+  document.body.appendChild(installBtn);
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    installBtn.style.display = 'block';
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.style.display = 'none';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    installBtn.style.display = 'none';
+    deferredPrompt = null;
+  });
+
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch(err => console.error('SW registration failed:', err));
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
